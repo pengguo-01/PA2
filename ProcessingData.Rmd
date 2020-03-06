@@ -1,0 +1,106 @@
+---
+title: "PA2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+reading the dataset from web and test it
+```{r }
+library(ggplot2)
+setwd("C://Users//pg000//Desktop//Download")
+fileUrl <- "http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2"
+destfile <- ".//repdata-data-StormData.csv.bz2"
+if(!file.exists(destfile)) {
+ download.file(fileUrl, destfile = destfile, quiet = TRUE)
+ dateDownload <- date()
+}
+rawData <- read.csv(bzfile(destfile), stringsAsFactors = FALSE)
+names(rawData)
+```
+
+
+
+```{r }
+rawData$Total_cas <- rawData$FATALITIES + rawData$INJURIES
+value <- function(x) {
+ x <- tolower(x)
+ if(x=="k")res <- 1000
+ if(x == "m")res <- 1e+06
+ if(x == "b") res <- 1e+09
+ else res <- 1
+ res
+}
+rawData$pd <- rawData$PROPDMG * sapply(rawData$PROPDMGEXP, value)/1000000
+rawData$cd <- rawData$CROPDMG * sapply(rawData$CROPDMGEXP, value)/1000000
+rawData$td <- rawData$pd + rawData$cd
+```
+## taking relevant variable new dataset is constructed 
+```{r}
+proc_data <- rawData[,c("EVTYPE","FATALITIES","INJURIES",
+                        "Total_cas","pd","cd","td")]
+proc_data <- aggregate(proc_data[,2:7], 
+           by =list(proc_data$EVTYPE), FUN = sum, na.rm = TRUE)
+
+colnames(proc_data) <- c("EVETYPE", colnames(proc_data[2:7]))
+```
+top_data() function takes data frame (df), column number (col) and returns the top results.
+
+```{r}
+top_data <- function(df, col,top) {
+ df <- df[,c(1,col)]
+ df <- df[order(df[,2],decreasing = TRUE),]
+ df <- df[1:top,]
+ rownames(df) <- NULL
+ df
+}
+```
+## top 3 events with FATALITIES
+```{r}
+top_data(proc_data,2,3)
+```
+## check the INJURIES
+```{r}
+top_data(proc_data,3,3)
+```
+## top 10 events with total casualities
+```{r}
+cu_data <- top_data(proc_data, 4, 10)
+cu_data
+```
+## plot the top 10 events with most total casualities
+```{r}
+ggplot(cu_data, aes(x=EVETYPE, y=Total_cas, fill = EVETYPE))+
+geom_bar(stat = "identity")+
+ggtitle("Top due to sever weather events in US")+
+ xlab("Events")+
+ ylab("Total Casulties")+
+ theme(axis.text.x = element_text(angle = 90, vjust =0.5))
+```
+## show the United States which the types of events have greatest consequence 
+```{r}
+top_data(proc_data, 5,3)
+```
+## the top 10 event with most total_cas
+```{r}
+top_data(proc_data, 6,3)
+dmg_data <- top_data(proc_data, 7,10)
+dmg_data
+```
+## plot the graph
+
+```{r}
+ggplot(dmg_data, aes(x = EVETYPE, y = td, fill =EVETYPE))+
+ geom_bar(stat ="identity") +
+ ggtitle("weather economic consequence events in US") +
+ xlab("events")+ 
+ ylab("total damage in million USD")+
+ theme(axis.text.x = element_text(angle = 90, vjust =0.5))
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
